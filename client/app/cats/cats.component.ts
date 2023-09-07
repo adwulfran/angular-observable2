@@ -1,10 +1,13 @@
 import { Component, OnInit } from '@angular/core';
-
 import { CatService } from '../services/cat.service';
 import { ToastComponent } from '../shared/toast/toast.component';
 import { Cat } from '../shared/models/cat.model';
-import { BehaviorSubject, Observable, concat, filter, forkJoin, from, map, merge, of, switchMap, tap } from 'rxjs';
-import { UntypedFormGroup, UntypedFormControl, Validators, UntypedFormBuilder } from '@angular/forms';
+import { Observable } from 'rxjs';
+import { CatDataService } from '../services/cat.data.service';
+import { QuestionBase } from '../question-base';
+import { QuestionService } from '../question.service';
+import { Store } from '@ngrx/store';
+import { CatsActions } from '../store/cats.actions';
 
 @Component({
   selector: 'app-cats',
@@ -13,44 +16,33 @@ import { UntypedFormGroup, UntypedFormControl, Validators, UntypedFormBuilder } 
 })
 export class CatsComponent implements OnInit {
 
-  private _cats$ = new BehaviorSubject<Cat[]>([]);
-  readonly cats$ = this._cats$.asObservable();
-  private cats: Cat[] = [];
-
   isLoading = true;
   isEditing = false;
-
-  editCatForm: UntypedFormGroup;
-  name = new UntypedFormControl('', Validators.required);
-  age = new UntypedFormControl('', Validators.required);
-  weight = new UntypedFormControl('', Validators.required);
-  _id = new UntypedFormControl('', Validators.required);
+  isAdding = false;
+  cat: Cat = {};
+  questions$?: Observable<QuestionBase<any>[]>;
+  cats$ = this.store.select('cats');
 
   constructor(private catService: CatService,
-    private formBuilder: UntypedFormBuilder,
-    public toast: ToastComponent) {
-    this.editCatForm = this.formBuilder.group({
-      _id: this._id,
-      name: this.name,
-      age: this.age,
-      weight: this.weight
-    });
-  }
+    public catDataService: CatDataService,
+    public toast: ToastComponent,
+    public service: QuestionService,
+    private store: Store<{ cats: Cat[] }>) { }
 
   ngOnInit(): void {
-    this.catService.getCats().subscribe({
-      next: data => {
-        this.cats = data;
-        this._cats$.next(Object.assign([], this.cats))
-      },
-      error: error => console.log(error),
-      complete: () => this.isLoading = false
-    });
+    this.catService.getCats().subscribe((cats) =>
+    {
+      this.store.dispatch(CatsActions.createCatsList({ cats }));
+      this.questions$ = this.service.getQuestions({})
+      this.isLoading = false;
+    }
+    );
   }
 
   enableEditing(cat: Cat): void {
+    this.cat = cat;
+    this.questions$ = this.service.getQuestions(cat);
     this.isEditing = true;
-    this.editCatForm.patchValue(cat);
   }
 
   cancelEditing(): void {
@@ -58,14 +50,23 @@ export class CatsComponent implements OnInit {
     this.toast.setMessage('Item editing cancelled.', 'warning');
   }
 
-  editCat(): void {
-    const v = this.editCatForm.value;
-    this.catService.editCat(v).subscribe({
+
+  editCat(cat: Cat): void {
+    this.catService.editCat({ ...cat, _id: this.cat._id }).subscribe({
       next: () => {
+        this.store.dispatch(CatsActions.updateCat({ cat: { ...cat, _id: this.cat._id } }));
         this.isEditing = false;
-        this.cats[this.cats.findIndex(x => x._id === v._id)] = v;
-        this._cats$.next(Object.assign([], this.cats));
         this.toast.setMessage('Item edited successfully.', 'success');
+      },
+      error: error => console.log(error)
+    });
+  }
+
+  addCat(cat: Cat): void {
+    this.catService.addCat(cat).subscribe({
+      next: (res) => {
+        this.store.dispatch(CatsActions.addCat({ cat: { ...res } }));
+        this.toast.setMessage('Item added successfully.', 'success');
       },
       error: error => console.log(error)
     });
@@ -75,6 +76,8 @@ export class CatsComponent implements OnInit {
     if (window.confirm('Are you sure you want to permanently delete this item?')) {
       this.catService.deleteCat(cat).subscribe({
         next: () => {
+          this.store.dispatch(CatsActions.removeBook({ cat }))
+          /*
           this.cats.forEach((t, i) => {
             if (t._id === cat._id) {
               this.cats.splice(i, 1);
@@ -82,10 +85,18 @@ export class CatsComponent implements OnInit {
             this._cats$.next(Object.assign([], this.cats));
           });
           this.toast.setMessage('Item deleted successfully.', 'success');
-        },
+        */},
         error: error => console.log(error)
       });
     }
   }
 
+  enableAdding(): void {
+    this.isAdding = true;
+    this.questions$ = this.service.getQuestions({})
+  }
+
+  cancelAdding(): void {
+    this.isAdding = false;
+  }
 }

@@ -5,6 +5,8 @@ import { HttpClientModule } from '@angular/common/http';
 
 import { ToastComponent } from './toast/toast.component';
 import { LoadingComponent } from './loading/loading.component';
+import { DynamicFormComponent } from './dynamic-form/dynamic-form.component';
+import { DynamicFormQuestionComponent } from './dynamic-form-question/dynamic-form-question.component';
 
 @NgModule({
   imports: [
@@ -21,11 +23,15 @@ import { LoadingComponent } from './loading/loading.component';
     HttpClientModule,
     // Shared Components
     ToastComponent,
-    LoadingComponent
+    LoadingComponent,
+    DynamicFormComponent,
+    DynamicFormQuestionComponent
   ],
   declarations: [
     ToastComponent,
-    LoadingComponent
+    LoadingComponent,
+    DynamicFormComponent,
+    DynamicFormQuestionComponent
   ],
   providers: [
     ToastComponent

@@ -1,4 +1,4 @@
-import { Component, Input, OnChanges, SimpleChanges } from '@angular/core';
+import { Component, Input } from '@angular/core';
 import { UntypedFormGroup, UntypedFormControl, Validators, UntypedFormBuilder } from '@angular/forms';
 import { CatService } from '../services/cat.service';
 import { ToastComponent } from '../shared/toast/toast.component';
@@ -11,7 +11,7 @@ import { Observable, map, of, switchMap, tap } from 'rxjs';
   styleUrls: ['./add-cat-form.component.scss']
 })
 
-export class AddCatFormComponent  {
+export class AddCatFormComponent {
   @Input() cats$: Observable<Cat[]> = of([])
 
   addCatForm: UntypedFormGroup;
@@ -39,13 +39,5 @@ export class AddCatFormComponent  {
       error: error => console.log(error)
     });
   }
-/*
-    this.cats = this.cats?.pipe(tap((res) => console.log('?')), map(data => {
-      return [...data, this.addCatForm.value]
-    }))
-    */
-
-
-  
 
 }
