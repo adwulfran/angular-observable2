@@ -2,8 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CatService } from '../services/cat.service';
 import { ToastComponent } from '../shared/toast/toast.component';
 import { Cat } from '../shared/models/cat.model';
-import { Observable } from 'rxjs';
-import { CatDataService } from '../services/cat.data.service';
+import { BehaviorSubject, Observable, ReplaySubject, tap } from 'rxjs';
 import { QuestionBase } from '../question-base';
 import { QuestionService } from '../question.service';
 import { Store } from '@ngrx/store';
@@ -19,19 +18,18 @@ export class CatsComponent implements OnInit {
   isLoading = true;
   isEditing = false;
   isAdding = false;
-  cat: Cat = {};
+
   questions$?: Observable<QuestionBase<any>[]>;
   cats$ = this.store.select('cats');
+  $catId = new BehaviorSubject<string | undefined>('');
 
   constructor(private catService: CatService,
-    public catDataService: CatDataService,
     public toast: ToastComponent,
     public service: QuestionService,
     private store: Store<{ cats: Cat[] }>) { }
 
   ngOnInit(): void {
-    this.catService.getCats().subscribe((cats) =>
-    {
+    this.catService.getCats().subscribe((cats) => {
       this.store.dispatch(CatsActions.createCatsList({ cats }));
       this.questions$ = this.service.getQuestions({})
       this.isLoading = false;
@@ -40,7 +38,8 @@ export class CatsComponent implements OnInit {
   }
 
   enableEditing(cat: Cat): void {
-    this.cat = cat;
+    console.log('yo')
+    this.$catId.next(cat._id)
     this.questions$ = this.service.getQuestions(cat);
     this.isEditing = true;
   }
@@ -51,10 +50,10 @@ export class CatsComponent implements OnInit {
   }
 
 
-  editCat(cat: Cat): void {
-    this.catService.editCat({ ...cat, _id: this.cat._id }).subscribe({
+  public editCat(cat: Cat) {
+    this.catService.editCat({ ...cat, _id: this.$catId.getValue() }).subscribe({
       next: () => {
-        this.store.dispatch(CatsActions.updateCat({ cat: { ...cat, _id: this.cat._id } }));
+        this.store.dispatch(CatsActions.updateCat({ cat: { ...cat, _id: this.$catId.getValue() } }));
         this.isEditing = false;
         this.toast.setMessage('Item edited successfully.', 'success');
       },
